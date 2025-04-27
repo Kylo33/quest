@@ -73,14 +73,7 @@ async def quest_route() -> list[Game]:
                         ),
                         0,
                     ),
-                    "daily": next(
-                        (
-                            requirement["type"] == "DailyResetQuestRequirement"
-                            for requirement in quest["requirements"]
-                        ),
-                        None,
-                    )
-                    != None,
+                    "daily": next((True for requirement in quest["requirements"] if requirement["type"] == "DailyResetQuestRequirement"), False)
                 }
                 for quest in sorted(quest_list, key=lambda q: q["name"])
             ],
