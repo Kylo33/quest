@@ -18,7 +18,9 @@ const questQueryOptions = queryOptions({
   queryKey: ["quests"],
   staleTime: 15 * 60_000,
   queryFn: () =>
-    fetch("http://localhost:8000/quests").then((res) => res.json()),
+    fetch(`${import.meta.env.VITE_BACKEND_URL}/quests`).then((res) =>
+      res.json()
+    ),
 });
 
 function playerQueryOptions(username: string) {
@@ -27,7 +29,9 @@ function playerQueryOptions(username: string) {
     staleTime: 15_000,
     queryFn: () =>
       fetch(
-        `http://localhost:8000/player?username=${username.toLocaleLowerCase()}`
+        `${
+          import.meta.env.VITE_BACKEND_URL
+        }/player?username=${username.toLocaleLowerCase()}`
       ).then((res) => res.json()),
   });
 }

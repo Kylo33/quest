@@ -12,6 +12,8 @@ app = FastAPI()
 load_dotenv()
 
 origins = [
+    "http://quest.renntg.com",
+    "https://quest.renntg.com",
     "http://localhost:5173",
 ]
 
