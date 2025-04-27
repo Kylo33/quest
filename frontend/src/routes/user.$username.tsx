@@ -61,7 +61,7 @@ function getXpFromNetworkLevel(level: number) {
 
 function RouteComponent() {
   const [targetLevel, setTargetLevel] = useState<number | undefined>();
-  const [dailyChallenges, setDailyChallenges] = useState<number>(10);
+  const [dailyChallenges, setDailyChallenges] = useState<string>("10");
   const [selectedQuests, setSelectedQuests] = useState<Quest[]>([]);
   const { username } = Route.useParams();
   const questQuery = useQuery(questQueryOptions);
@@ -80,7 +80,7 @@ function RouteComponent() {
       .filter((q) => q.daily)
       .map((q) => q.xp)
       .reduce((t, n) => t + n, 0) +
-    dailyChallenges * 3700;
+    (+dailyChallenges || 0) * 3700;
 
   const weeklyXp = selectedQuests
     .filter((q) => !q.daily)
@@ -180,8 +180,9 @@ function RouteComponent() {
             max={10}
             autoFocus
             id="targetLevel"
+            value={dailyChallenges}
             className="text-xl max-w-2xl border border-gray-300 rounded-md shadow-sm py-2 px-4"
-            onChange={(e) => setDailyChallenges(+e.target.value || 0)}
+            onChange={(e) => setDailyChallenges(e.target.value)}
           />
         </div>
         <div className="bg-purple-300 h-96 w-full rounded-lg"></div>
