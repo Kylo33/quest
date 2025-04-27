@@ -49,7 +49,7 @@ function getNetworkLevelFromXp(xp: number) {
   // Credit to "nathanfranke" on the Hypixel forums for this equation! Thank you!
   // https://hypixel.net/threads/guide-network-level-equations.3412241/
 
-  return Math.floor(Math.sqrt(xp / 1250 + 12.25) - 3.5);
+  return Math.floor(Math.sqrt(xp / 1250 + 12.25) - 3.5) + 1;
 }
 
 function getXpFromNetworkLevel(level: number) {
