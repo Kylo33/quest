@@ -16,7 +16,7 @@ import { useState } from "react";
 
 const questQueryOptions = queryOptions({
   queryKey: ["quests"],
-  staleTime: 15 * 60_000,
+  staleTime: 6 * 60 * 60_000,
   queryFn: () =>
     fetch(`${import.meta.env.VITE_BACKEND_URL}/quests`).then((res) =>
       res.json()

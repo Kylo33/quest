@@ -2,3 +2,4 @@ fastapi[standard]
 fastapi-cli
 python-dotenv
 aiohttp[speedups]
+redis[hiredis]
