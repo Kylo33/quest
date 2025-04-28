@@ -1,9 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { User } from "lucide-react";
 import { useState } from "react";
+import { questQueryOptions } from "../query";
 
 export const Route = createFileRoute("/")({
   component: RouteComponent,
+  loader: async ({ context: { queryClient } }) => {
+    queryClient.prefetchQuery(questQueryOptions);
+  },
 });
 
 function RouteComponent() {
@@ -21,7 +25,10 @@ function RouteComponent() {
   return (
     <div className="w-screen h-screen flex flex-col justify-center items-center">
       <form className="flex flex-col gap-y-2" onSubmit={onSubmit}>
-        <label className="text-xl text-gray-700 flex gap-x-2 items-center" htmlFor="username">
+        <label
+          className="text-xl text-gray-700 flex gap-x-2 items-center"
+          htmlFor="username"
+        >
           <User /> Username
         </label>
         <input

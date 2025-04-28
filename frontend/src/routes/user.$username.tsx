@@ -1,4 +1,4 @@
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -13,28 +13,7 @@ import {
 import GameQuests from "../components/game-quests";
 import { Game, Quest } from "../types";
 import { useState } from "react";
-
-const questQueryOptions = queryOptions({
-  queryKey: ["quests"],
-  staleTime: 6 * 60 * 60_000,
-  queryFn: () =>
-    fetch(`${import.meta.env.VITE_BACKEND_URL}/quests`).then((res) =>
-      res.json()
-    ),
-});
-
-function playerQueryOptions(username: string) {
-  return queryOptions({
-    queryKey: ["player", username.toLowerCase()],
-    staleTime: 15_000,
-    queryFn: () =>
-      fetch(
-        `${
-          import.meta.env.VITE_BACKEND_URL
-        }/player?username=${username.toLocaleLowerCase()}`
-      ).then((res) => res.json()),
-  });
-}
+import { playerQueryOptions, questQueryOptions } from "../query";
 
 export const Route = createFileRoute("/user/$username")({
   component: RouteComponent,
