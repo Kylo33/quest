@@ -8,12 +8,14 @@ import {
   Goal,
   Hash,
   Sunrise,
+  Trophy,
   Zap,
 } from "lucide-react";
 import GameQuests from "../components/game-quests";
 import { Game, Quest } from "../types";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { playerQueryOptions, questQueryOptions } from "../query";
+import { ResponsiveLine } from "@nivo/line";
 
 export const Route = createFileRoute("/user/$username")({
   component: RouteComponent,
@@ -28,23 +30,32 @@ function getNetworkLevelFromXp(xp: number) {
   // Credit to "nathanfranke" on the Hypixel forums for this equation! Thank you!
   // https://hypixel.net/threads/guide-network-level-equations.3412241/
 
-  return Math.floor(Math.sqrt(xp / 1250 + 12.25) - 3.5) + 1;
+  return Math.sqrt(xp / 1250 + 12.25) - 2.5;
 }
 
 function getXpFromNetworkLevel(level: number) {
   // Credit to "nathanfranke" on the Hypixel forums for this equation! Thank you!
   // https://hypixel.net/threads/guide-network-level-equations.3412241/
-
+  level--;
   return level * (1250 * level + 8750);
 }
 
 function RouteComponent() {
-  const [targetLevel, setTargetLevel] = useState<number | undefined>();
   const [dailyChallenges, setDailyChallenges] = useState<string>("10");
   const [selectedQuests, setSelectedQuests] = useState<Quest[]>([]);
+  const [expectedDate, setExpectedDate] = useState<Date | undefined>();
+  const [graphData, setGraphData] = useState<
+    {
+      x: Date;
+      y: number;
+    }[]
+  >([]);
   const { username } = Route.useParams();
   const questQuery = useQuery(questQueryOptions);
   const playerQuery = useQuery(playerQueryOptions(username));
+  const [targetLevel, setTargetLevel] = useState<number>(
+    Math.ceil(Math.floor(getNetworkLevelFromXp(playerQuery.data.xp)) / 50) * 50
+  );
 
   function toggleQuest(quest: Quest) {
     if (!selectedQuests.map((q) => q.name).includes(quest.name)) {
@@ -66,45 +77,75 @@ function RouteComponent() {
     .map((q) => q.xp)
     .reduce((t, n) => t + n, 0);
 
-  function calculateExpectedDate(): string {
-    if (!targetLevel) {
-      return "";
-    }
-
-    const neededXp = getXpFromNetworkLevel(targetLevel) - playerQuery.data.xp;
-
-    if (neededXp <= 0) {
-      return "";
-    }
-
-    let remainingXp = neededXp;
-
-    const dateFormatter = Intl.DateTimeFormat("en-US", {
-      timeZone: "America/New_York",
-      weekday: "long",
-    });
-
-    const dateCursor = new Date();
-
-    let i;
-    for (i = 0; i < 10 * 365 && remainingXp >= 0; i++) {
-      remainingXp -= dailyXp;
-      // Assume the player gets all of their weekly quests on the last day of the week (in EST)
-      if (dateFormatter.format(dateCursor) == "Thursday") {
-        remainingXp -= weeklyXp;
+  useEffect(() => {
+    function calculateExpectedDate(): Date | undefined {
+      if (!targetLevel) {
+        return undefined;
       }
 
-      dateCursor.setDate(dateCursor.getDate() + 1);
+      const targetXp = getXpFromNetworkLevel(targetLevel);
+
+      console.log(targetXp);
+
+      const neededXp = targetXp - playerQuery.data.xp;
+
+      if (neededXp <= 0) {
+        return undefined;
+      }
+
+      let remainingXp = neededXp;
+      console.log("Remaining XP:", remainingXp);
+      console.log("Daily XP:", dailyXp);
+      console.log("Weekly XP:", weeklyXp);
+
+      const dateFormatter = Intl.DateTimeFormat("en-US", {
+        timeZone: "America/New_York",
+        weekday: "long",
+      });
+
+      const dateCursor = new Date();
+      const newGraphData = [];
+
+      let i;
+      for (i = 0; i < 10 * 365 && remainingXp >= 0; i++) {
+        remainingXp -= dailyXp;
+        // Assume the player gets all of their weekly quests on the last day of the week (in EST)
+        if (dateFormatter.format(dateCursor) == "Thursday") {
+          remainingXp -= weeklyXp;
+        }
+
+        const level = Math.floor(getNetworkLevelFromXp(targetXp - remainingXp));
+        if (
+          (!newGraphData.length &&
+            level > Math.floor(getNetworkLevelFromXp(playerQuery.data.xp))) ||
+          (newGraphData.length &&
+            level > newGraphData[newGraphData.length - 1].y)
+        ) {
+          newGraphData.push({
+            x: new Date(dateCursor),
+            y: level,
+          });
+        }
+        dateCursor.setDate(dateCursor.getDate() + 1);
+      }
+
+      if (i == 10 * 365) {
+        return undefined;
+      }
+
+      setGraphData(newGraphData);
+      return dateCursor;
     }
 
-    if (i == 10 * 365) {
-      return "";
-    }
-
-    return dateCursor.toDateString();
-  }
-
-  const expectedDate = calculateExpectedDate();
+    setExpectedDate(calculateExpectedDate());
+  }, [
+    targetLevel,
+    dailyChallenges,
+    selectedQuests,
+    playerQuery.data.xp,
+    dailyXp,
+    weeklyXp,
+  ]);
 
   return (
     <>
@@ -123,7 +164,8 @@ function RouteComponent() {
               Quests {playerQuery.data.quests_completed}
             </div>
             <div className="bg-purple-700/90 rounded-full text-white px-4 py-1">
-              Network Level {getNetworkLevelFromXp(playerQuery.data.xp)}
+              Network Level{" "}
+              {Math.floor(getNetworkLevelFromXp(playerQuery.data.xp))}
             </div>
           </div>
         </section>
@@ -142,28 +184,77 @@ function RouteComponent() {
           >
             <Goal size={24} /> Target Level
           </label>
-          <h3 className="flex gap-x-2 text-xl items-center">
+          <label
+            htmlFor="dailyChallenges"
+            className="flex gap-x-2 text-xl items-center"
+          >
             <Zap size={24} /> Daily Challenges
-          </h3>
+          </label>
           <input
             type="number"
             autoFocus
             id="targetLevel"
             className="text-xl max-w-2xl border border-gray-300 rounded-md shadow-sm py-2 px-4"
             value={targetLevel}
-            onChange={(e) => setTargetLevel(+e.target.value || undefined)}
+            onChange={(e) => setTargetLevel(+e.target.value || 0)}
           />
           <input
             type="number"
             min={0}
             max={10}
-            id="targetLevel"
+            id="dailyChallenges"
             value={dailyChallenges}
             className="text-xl max-w-2xl border border-gray-300 rounded-md shadow-sm py-2 px-4"
             onChange={(e) => setDailyChallenges(e.target.value)}
           />
         </div>
-        <div className="bg-purple-300 h-96 w-full rounded-lg"></div>
+        <div className="h-96 w-full border border-gray-300 rounded-md shadow-sm py-2 px-4">
+          <ResponsiveLine
+            enableGridX={false}
+            yScale={{
+              min: Math.floor(getNetworkLevelFromXp(playerQuery.data.xp)),
+              max: targetLevel + 1,
+              type: "linear",
+            }}
+            xScale={{
+              min: graphData[0]?.x,
+              max: graphData[graphData.length - 1]?.x,
+              type: "time",
+              format: "%Y-%m-%d",
+            }}
+            axisLeft={{
+              legend: "Network Level",
+              legendOffset: -40,
+              legendPosition: "middle",
+            }}
+            tooltip={({ point }) => (
+              <div className="bg-white px-2 py-1 rounded-sm shadow-md flex items-center gap-x-2">
+                <Trophy size={14} className="text-purple-700/90" />{" "}
+                <div>
+                  <span className="text-purple-700/90">{point.data.y}</span>:{" "}
+                  {point.data.x.toLocaleDateString()}
+                </div>
+              </div>
+            )}
+            axisBottom={{ tickRotation: -20, format: "%Y-%m-%d" }}
+            animate
+            curve="cardinal"
+            data={[
+              {
+                data: graphData,
+                id: "1",
+              },
+            ]}
+            isFocusable
+            enableArea
+            areaBaselineValue={Math.floor(
+              getNetworkLevelFromXp(playerQuery.data.xp)
+            )}
+            useMesh
+            margin={{ top: 50, right: 50, bottom: 50, left: 50 }}
+            colors={["#8d18dd"]}
+          />
+        </div>
         <div className="flex justify-between divide-x divide-gray-200">
           <div className="flex flex-1 flex-col gap-y-2 items-center">
             <h3 className="flex gap-x-2 text-lg text-gray-600 items-center">
@@ -195,7 +286,7 @@ function RouteComponent() {
               Expected Date
             </h3>
             <p className="text-xl py-2 px-4 text-center flex flex-1 justify-center items-center">
-              {expectedDate.toLocaleString()}
+              {expectedDate?.toLocaleDateString() || "?"}
             </p>
           </div>
         </div>
